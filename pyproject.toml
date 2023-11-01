@@ -1,0 +1,16 @@
+[project]
+name = "jubtools"
+description = "Shared tools for my own work"
+readme = "README.md"
+license = { file = "LICENSE" }
+version = "0.1.0"
+authors = [{ name = "Andrew Morcom", email = "jubulani@fastmail.fm" }]
+requires-python = ">=3.8"
+dependencies = ["fastapi"]
+
+[project.urls]
+Repository = "https://github.com/Jubulani/jubtools.git"
+
+[build-system]
+requires = ["setuptools>=68.0.0."]
+build-backend = "setuptools.build_meta"

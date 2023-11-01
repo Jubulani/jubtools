@@ -1,1 +1,4 @@
 __pycache__/
+.python-version
+dist/
+jubtools.egg-info/

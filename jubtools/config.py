@@ -9,7 +9,7 @@ ENV_DIR = "env/"
 BASE_CONFIG_FILE = "base.toml"
 
 
-def init(env: str | None):
+def init(env: str | None = None):
     # First, load from base config file
     base_filename = os.path.join(CONFIG_DIR, BASE_CONFIG_FILE)
     _load_from_file(base_filename)

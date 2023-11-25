@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 # from errors import AuthError, FSError
 
-from lib import config, misctools, sqlt
+import config, misctools, sqlt
 
 logger = logging.getLogger(__name__)
 

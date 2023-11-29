@@ -1,9 +1,8 @@
 import os
-from typing import Any
 
 import toml
 
-CONFIG: Any = {}
+CONFIG: dict = {}
 CONFIG_DIR = "config/"
 ENV_DIR = "env/"
 BASE_CONFIG_FILE = "base.toml"
@@ -21,7 +20,7 @@ def init(env: str | None = None):
 
 
 # Get a value from config. Will handle nested key names separated by dots eg. 'db.port'
-def get(full_key):
+def get(full_key: str):
     keys = full_key.split(".")
     vals = CONFIG
     for key in keys:
@@ -31,14 +30,14 @@ def get(full_key):
     return vals
 
 
-def _load_from_file(filename):
+def _load_from_file(filename: str):
     global CONFIG
     config_dict = toml.load(filename)
     _merge_into(config_dict, CONFIG)
 
 
 # Merge dicts recursively, overwriting values in dest with new values from src if present
-def _merge_into(src, dest):
+def _merge_into(src: dict, dest: dict) -> None:
     for key, value in src.items():
         if isinstance(value, dict):
             # get node or create one
@@ -46,5 +45,3 @@ def _merge_into(src, dest):
             _merge_into(value, node)
         else:
             dest[key.casefold()] = value
-
-    return dest

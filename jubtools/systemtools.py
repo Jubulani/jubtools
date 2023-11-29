@@ -1,9 +1,9 @@
 import datetime as dt
 import logging
 import os
+from typing import Any
 
-from fastapi import FastAPI, Request, Response
-from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi import FastAPI, Response
 from pydantic import BaseModel
 
 # from errors import AuthError, FSError
@@ -16,10 +16,10 @@ APP_NAME = "GreekServer"
 APP_START_TIME: dt.datetime
 
 
-def create_fastapi_app():
+def create_fastapi_app() -> FastAPI:
     global APP_START_TIME
 
-    fastapi_args = {"title": APP_NAME}
+    fastapi_args: dict[str, Any] = {"title": APP_NAME}
     if config.get("fastapi.disable_docs"):
         fastapi_args["openapi_url"] = None
     app = FastAPI(**fastapi_args)
@@ -100,5 +100,7 @@ class TimerMiddleware:
             status_code = 500
             raise
         finally:
-            logger.info(f"END - {scope['method']} {path} {status_code} ({timer.elapsed:.2f}ms)")
+            logger.info(
+                f"END - {scope['method']} {path} {status_code} ({timer.elapsed:.2f}ms)"
+            )
         return result

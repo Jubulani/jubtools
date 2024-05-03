@@ -1,0 +1,159 @@
+from contextlib import asynccontextmanager
+import os
+import logging
+import time
+from typing import List, Dict, Tuple, Iterable
+
+import asyncpg
+from fastapi import Request
+
+from api.jubtools import config, misctools
+
+logger = logging.getLogger(__name__)
+
+_POOL = None
+_SQL = {}
+
+
+# Add ability to use 'row.value' syntax, which is shorter and easier than 'row["value"]'
+class Row(asyncpg.Record):
+    def __getattr__(self, name):
+        return self[name]
+
+
+async def init():
+    global _POOL
+
+    host = config.get("postgres.host")
+    port = config.get("postgres.port")
+    database = config.get("postgres.database")
+    user = config.get("postgres.user")
+    password = os.environ["PG_PASSWORD"]
+    logger.info(f"Connecting to db {host}/{database}:{port} as {user}")
+
+    _POOL = await asyncpg.create_pool(
+        host=host,
+        port=port,
+        user=user,
+        password=password,
+        database=database,
+        min_size=2,
+        record_class=Row,
+    )
+    logger.info("DB connection pool created")
+
+
+async def shutdown():
+    global _POOL
+
+    if _POOL is not None:
+        await _POOL.close()
+
+
+def store(name, sql):
+    global _SQL
+    logger.info(f"Store sql: {name}")
+    if name in _SQL:
+        raise ValueError(f"Duplicate sql: {name}")
+    _SQL[name] = sql
+
+
+async def execute(req: Request, name: str, args={}, log_args=True) -> List[Row]:
+    con = req.scope["db_conn"]
+    return await execute_with_conn(con, name, args, log_args)
+
+
+async def execute_with_conn(con, name, args={}, log_args=True) -> List[Row]:
+    if log_args:
+        logger.info(f"Execute sql {name} with args: {args}")
+    else:
+        logger.info(f"Execute sql {name}")
+    sql, params = _get_sql(name, args)
+    with misctools.Timer() as timer:
+        rs = await con.fetch(sql, *params)
+    logger.info(f"{len(rs)} row{'s' if len(rs) != 1 else ''} ({timer.elapsed:.2f}ms)")
+    return rs
+
+
+async def execute_sql(req: Request, sql: str, args={}) -> List[Row]:
+    con = req.scope["db_conn"]
+    return await execute_sql_with_conn(con, sql, args)
+
+
+async def execute_sql_with_conn(con, sql: str, args={}) -> List[Row]:
+    logger.info(f"Execute custom sql with args: {args}")
+    sql, params = _format_sql(sql, args)
+    with misctools.Timer() as timer:
+        rs = await con.fetch(sql, *params)
+    logger.info(f"{len(rs)} row{'s' if len(rs) != 1 else ''} ({timer.elapsed:.2f}ms)")
+    return rs
+
+
+def transaction(req):
+    return Transaction(req.scope["db_conn"])
+
+
+# Aquire a temporary connection object, for performing queries outside a transaction, etc.
+# Should not normally need to be used
+@asynccontextmanager
+async def aquire_conn():
+    async with _POOL.acquire() as con:
+        yield con
+
+
+class Serial(dict):
+    def __getitem__(self, key):
+        return f"${list(self.keys()).index(key) + 1}"
+
+
+# Get the sql from our saved list and process it with _format_sql
+def _get_sql(name, args) -> Tuple[str, Iterable]:
+    global _SQL
+    if name not in _SQL:
+        raise Exception(f"Unknown sql: {name}")
+    return _format_sql(_SQL[name], args)
+
+
+# Convert named ("{name}") params in the sql into positional
+# arguments ("$1"), as named arguments are not supported by asyncpg
+def _format_sql(sql: str, args: Dict) -> Tuple[str, Iterable]:
+    params = Serial(args)
+    sql = sql.format_map(params)
+    return (sql, params.values())
+
+
+# Starlette middleware that acquires a db connection before the request, and releases it afterwards
+class ConnMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        # Ignore calls that are not http requests (eg. startup)
+        # Ignore /health requests - we don't need a db connection for these
+        if scope["type"] != "http" or scope["path"] == "/health":
+            return await self.app(scope, receive, send)
+
+        async with _POOL.acquire() as conn:
+            scope["db_conn"] = conn
+
+            return await self.app(scope, receive, send)
+
+
+# Basic transaction wrapper which adds timing and logging
+class Transaction(asyncpg.transaction.Transaction):
+    def __init__(self, conn):
+        self.transaction = conn.transaction()
+
+    async def __aenter__(self):
+        logger.info("Start transaction")
+        self._start = time.time()
+        await self.transaction.start()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        elapsed = (time.time() - self._start) * 1000
+        if exc_type is None:
+            await self.transaction.commit()
+            logger.info(f"Commit transaction (total {elapsed:.2f}ms)")
+        else:
+            await self.transaction.rollback()
+            logger.info(f"Rollback transaction (total {elapsed:.2f}ms)")

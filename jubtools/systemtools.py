@@ -1,4 +1,5 @@
 import datetime as dt
+from enum import Enum
 import logging
 import os
 from typing import Any
@@ -8,18 +9,22 @@ from pydantic import BaseModel
 
 # from errors import AuthError, FSError
 
-from jubtools import config, misctools, sqlt
+from api.jubtools import config, misctools
 
 logger = logging.getLogger(__name__)
 
-APP_NAME = "GreekServer"
 APP_START_TIME: dt.datetime
 
 
-def create_fastapi_app() -> FastAPI:
+class DBModule(Enum):
+    SQLITE = 1
+    POSTGRES = 2
+
+
+def create_fastapi_app(db_module: DBModule | None = None) -> FastAPI:
     global APP_START_TIME
 
-    fastapi_args: dict[str, Any] = {"title": APP_NAME}
+    fastapi_args: dict[str, Any] = {"title": config.get("app_name")}
     if config.get("fastapi.disable_docs"):
         fastapi_args["openapi_url"] = None
     app = FastAPI(**fastapi_args)
@@ -27,16 +32,31 @@ def create_fastapi_app() -> FastAPI:
     APP_START_TIME = dt.datetime.now()
     app.add_api_route("/health", health_handler, methods=["GET"])
 
+    if db_module is not None:
+        init_db_module(db_module, app)
     # app.add_exception_handler(FSError, custom_exception_handler)
-
-    # app.add_event_handler("startup", psql.init)
-    # app.add_event_handler("shutdown", psql.shutdown)
-    app.add_middleware(sqlt.ConnMiddleware)
 
     # Add last, so it wraps everything
     app.add_middleware(TimerMiddleware)
 
     return app
+
+
+def init_db_module(db_module: DBModule, app: FastAPI):
+    """ Use dynamic imports here, so we don't need to install all db drivers """
+
+    match db_module:
+        case DBModule.SQLITE:
+            from api.jubtools import sqlt
+            app.add_middleware(sqlt.ConnMiddleware)
+
+        case DBModule.POSTGRES:
+            from api.jubtools import psql
+            app.add_event_handler("startup", psql.init)
+            app.add_event_handler("shutdown", psql.shutdown)
+
+        case _:
+            raise ValueError(f"Unknown db_module: {db_module}")
 
 
 class HealthResponse(BaseModel):

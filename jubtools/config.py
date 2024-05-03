@@ -1,6 +1,9 @@
+import logging
 import os
 
 import toml
+
+logger = logging.getLogger(__name__)
 
 CONFIG: dict = {}
 CONFIG_DIR = "config/"
@@ -8,15 +11,14 @@ ENV_DIR = "env/"
 BASE_CONFIG_FILE = "base.toml"
 
 
-def init(env: str | None = None):
+def init(env: str):
     # First, load from base config file
     base_filename = os.path.join(CONFIG_DIR, BASE_CONFIG_FILE)
     _load_from_file(base_filename)
 
     # Then, load from env file, overwriting if necessary
-    if env is not None:
-        env_filename = os.path.join(CONFIG_DIR, ENV_DIR, env) + ".toml"
-        _load_from_file(env_filename)
+    env_filename = os.path.join(CONFIG_DIR, ENV_DIR, env) + ".toml"
+    _load_from_file(env_filename)
 
 
 # Get a value from config. Will handle nested key names separated by dots eg. 'db.port'
@@ -32,6 +34,7 @@ def get(full_key: str):
 
 def _load_from_file(filename: str):
     global CONFIG
+    logger.info(f'Load config file: {filename}')
     config_dict = toml.load(filename)
     _merge_into(config_dict, CONFIG)
 

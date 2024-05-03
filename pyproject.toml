@@ -3,9 +3,9 @@ name = "jubtools"
 description = "Shared tools for my own work"
 readme = "README.md"
 license = { file = "LICENSE" }
-version = "0.2.1"
+version = "0.3.0"
 authors = [{ name = "Andrew Morcom", email = "jubulani@fastmail.fm" }]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = ["fastapi"]
 
 [project.urls]

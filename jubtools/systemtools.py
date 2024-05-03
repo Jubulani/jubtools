@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 # from errors import AuthError, FSError
 
-from api.jubtools import config, misctools
+from jubtools import config, misctools
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +47,11 @@ def init_db_module(db_module: DBModule, app: FastAPI):
 
     match db_module:
         case DBModule.SQLITE:
-            from api.jubtools import sqlt
+            from jubtools import sqlt
             app.add_middleware(sqlt.ConnMiddleware)
 
         case DBModule.POSTGRES:
-            from api.jubtools import psql
+            from jubtools import psql
             app.add_event_handler("startup", psql.init)
             app.add_event_handler("shutdown", psql.shutdown)
 

@@ -7,7 +7,7 @@ from typing import List, Dict, Tuple, Iterable
 import asyncpg
 from fastapi import Request
 
-from api.jubtools import config, misctools
+from jubtools import config, misctools
 
 logger = logging.getLogger(__name__)
 

@@ -11,14 +11,15 @@ ENV_DIR = "env/"
 BASE_CONFIG_FILE = "base.toml"
 
 
-def init(env: str):
+def init(env: str | None = None):
     # First, load from base config file
     base_filename = os.path.join(CONFIG_DIR, BASE_CONFIG_FILE)
     _load_from_file(base_filename)
 
     # Then, load from env file, overwriting if necessary
-    env_filename = os.path.join(CONFIG_DIR, ENV_DIR, env) + ".toml"
-    _load_from_file(env_filename)
+    if env is not None:
+        env_filename = os.path.join(CONFIG_DIR, ENV_DIR, env) + ".toml"
+        _load_from_file(env_filename)
 
 
 # Get a value from config. Will handle nested key names separated by dots eg. 'db.port'

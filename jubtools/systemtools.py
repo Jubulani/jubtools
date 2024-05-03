@@ -14,6 +14,8 @@ from jubtools import config, misctools
 logger = logging.getLogger(__name__)
 
 APP_START_TIME: dt.datetime
+APP_VERSION: str
+APP_ENV: str
 
 
 class DBModule(Enum):
@@ -21,8 +23,13 @@ class DBModule(Enum):
     POSTGRES = 2
 
 
-def create_fastapi_app(db_module: DBModule | None = None) -> FastAPI:
+def create_fastapi_app(env: str, version: str, db_module: DBModule | None = None) -> FastAPI:
+    global APP_ENV
+    global APP_VERSION
     global APP_START_TIME
+
+    APP_ENV = env
+    APP_VERSION = version
 
     fastapi_args: dict[str, Any] = {"title": config.get("app_name")}
     if config.get("fastapi.disable_docs"):
@@ -75,8 +82,8 @@ async def health_handler(response: Response):
         request_ts=dt.datetime.now(),
         status="UP",
         uptime=str(dt.datetime.now() - APP_START_TIME),
-        version=os.environ["FS_VERSION"],
-        env=os.environ["FS_ENV"],
+        version=APP_VERSION,
+        env=APP_ENV,
     )
 
 

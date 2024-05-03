@@ -10,4 +10,4 @@ def test_timer_elapsed():
         # Simulate some task
         time.sleep(0.01)
     elapsed_time = timer.elapsed
-    assert elapsed_time == pytest.approx(1, abs=10)
+    assert elapsed_time == pytest.approx(10, abs=10)

@@ -1,3 +1,4 @@
+import csv
 from enum import Enum
 import logging
 from typing import Any
@@ -10,8 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class ResponseFormat(str, Enum):
-    JSON = "JSON"
     BYTES = "BYTES"
+    CSV = "CSV"
+    JSON = "JSON"
 
 
 async def get(
@@ -29,11 +31,13 @@ async def get(
                 resp.raise_for_status()
 
             match response_format:
-                case ResponseFormat.JSON:
-                    logger.info(f"Response JSON: {resp.json()}")
-                    return resp.json()
                 case ResponseFormat.BYTES:
                     logger.info(f"Response text: {resp.text}")
                     return resp.text
+                case ResponseFormat.CSV:
+                    return list(csv.DictReader(resp.text.splitlines(), delimiter=';'))
+                case ResponseFormat.JSON:
+                    logger.info(f"Response JSON: {resp.json()}")
+                    return resp.json()
     finally:
         logger.info(f"HTTP GET {url} {status} {reason} ({timer.elapsed:.2f}ms)")

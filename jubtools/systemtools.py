@@ -34,8 +34,10 @@ def create_fastapi_app(env: str, version: str, db_module: DBModule | None = None
     fastapi_args: dict[str, Any] = {
         "title": config.get("app_name"),
         "version": version,
-        "root_path": config.get("fastapi.root_path"),
     }
+    if 'root_path' in config.get('fastapi'):
+        fastapi_args["root_path"] = config.get("fastapi.root_path")
+        fastapi_args["root_path_in_servers"] = False
     if config.get("fastapi.disable_docs"):
         fastapi_args["openapi_url"] = None
     app = FastAPI(**fastapi_args)

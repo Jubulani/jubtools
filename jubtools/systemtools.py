@@ -67,6 +67,7 @@ def init_db_module(db_module: DBModule, app: FastAPI):
             from jubtools import psql
             app.add_event_handler("startup", psql.init)
             app.add_event_handler("shutdown", psql.shutdown)
+            app.add_middleware(psql.ConnMiddleware)
 
         case _:
             raise ValueError(f"Unknown db_module: {db_module}")

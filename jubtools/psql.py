@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
+import json
 import os
 import logging
 import time
@@ -7,12 +9,13 @@ from typing import List, Dict, Tuple, Iterable
 import asyncpg
 from fastapi import Request
 
-from jubtools import config, misctools
+from jubtools_e import config, misctools
 
 logger = logging.getLogger(__name__)
 
 _POOL = None
 _SQL = {}
+CONN = ContextVar('conn')
 
 
 # Add ability to use 'row.value' syntax, which is shorter and easier than 'row["value"]'
@@ -39,8 +42,18 @@ async def init():
         database=database,
         min_size=2,
         record_class=Row,
+        init=init_conn
     )
     logger.info("DB connection pool created")
+
+async def init_conn(conn):
+    logger.info(f"Initialising connection: {conn}")
+    await conn.set_type_codec(
+        'json',
+        encoder=json.dumps,
+        decoder=json.loads,
+        schema='pg_catalog'
+    )
 
 
 async def shutdown():
@@ -58,9 +71,9 @@ def store(name, sql):
     _SQL[name] = sql
 
 
-async def execute(req: Request, name: str, args={}, log_args=True) -> List[Row]:
-    con = req.scope["db_conn"]
-    return await execute_with_conn(con, name, args, log_args)
+async def execute(name: str, args={}, log_args=True) -> List[Row]:
+    conn = CONN.get()
+    return await execute_with_conn(conn, name, args, log_args)
 
 
 async def execute_with_conn(con, name, args={}, log_args=True) -> List[Row]:
@@ -75,30 +88,22 @@ async def execute_with_conn(con, name, args={}, log_args=True) -> List[Row]:
     return rs
 
 
-async def execute_sql(req: Request, sql: str, args={}) -> List[Row]:
-    con = req.scope["db_conn"]
-    return await execute_sql_with_conn(con, sql, args)
+async def execute_sql(sql: str, args={}) -> List[Row]:
+    conn = CONN.get()
+    return await execute_sql_with_conn(conn, sql, args)
 
 
-async def execute_sql_with_conn(con, sql: str, args={}) -> List[Row]:
+async def execute_sql_with_conn(conn, sql: str, args={}) -> List[Row]:
     logger.info(f"Execute custom sql with args: {args}")
     sql, params = _format_sql(sql, args)
     with misctools.Timer() as timer:
-        rs = await con.fetch(sql, *params)
+        rs = await conn.fetch(sql, *params)
     logger.info(f"{len(rs)} row{'s' if len(rs) != 1 else ''} ({timer.elapsed:.2f}ms)")
     return rs
 
 
 def transaction(req):
     return Transaction(req.scope["db_conn"])
-
-
-# Aquire a temporary connection object, for performing queries outside a transaction, etc.
-# Should not normally need to be used
-@asynccontextmanager
-async def aquire_conn():
-    async with _POOL.acquire() as con:
-        yield con
 
 
 class Serial(dict):
@@ -122,6 +127,17 @@ def _format_sql(sql: str, args: Dict) -> Tuple[str, Iterable]:
     return (sql, params.values())
 
 
+@asynccontextmanager
+async def connect():
+    global CONN
+    async with _POOL.acquire() as conn:
+        token = CONN.set(conn)
+        try:
+            yield
+        finally:
+            CONN.reset(token)
+
+
 # Starlette middleware that acquires a db connection before the request, and releases it afterwards
 class ConnMiddleware:
     def __init__(self, app):
@@ -133,9 +149,7 @@ class ConnMiddleware:
         if scope["type"] != "http" or scope["path"] == "/health":
             return await self.app(scope, receive, send)
 
-        async with _POOL.acquire() as conn:
-            scope["db_conn"] = conn
-
+        async with connect():
             return await self.app(scope, receive, send)
 
 

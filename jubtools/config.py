@@ -1,4 +1,6 @@
+import json
 import logging
+import logging.config
 import os
 
 import toml
@@ -20,6 +22,13 @@ def init(env: str | None = None):
     if env is not None:
         env_filename = os.path.join(CONFIG_DIR, ENV_DIR, env) + ".toml"
         _load_from_file(env_filename)
+
+
+def init_logging(log_config_file: str = "log_config.json"):
+    filename = os.path.join(CONFIG_DIR, log_config_file)
+    with open(filename, "r") as f:
+        log_config = json.load(f)
+        logging.config.dictConfig(log_config)
 
 
 # Get a value from config. Will handle nested key names separated by dots eg. 'db.port'

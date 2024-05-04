@@ -110,7 +110,7 @@ class TimerMiddleware:
     async def __call__(self, scope, receive, send):
         # Ignore calls that are not http requests (eg. startup)
         # Ignore health requests - we don't want to log these
-        if scope["type"] != "http" or scope["path"] == "/api/health":
+        if scope["type"] != "http" or scope["path"] == "/health":
             return await self.app(scope, receive, send)
 
         status_code = "???"

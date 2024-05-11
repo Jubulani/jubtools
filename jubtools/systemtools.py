@@ -5,6 +5,7 @@ import os
 from typing import Any
 
 from fastapi import FastAPI, Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # from errors import AuthError, FSError
@@ -40,6 +41,15 @@ def create_fastapi_app(env: str, version: str, db_module: DBModule | None = None
     if config.get("fastapi.disable_docs"):
         fastapi_args["openapi_url"] = None
     app = FastAPI(**fastapi_args)
+
+    if 'cors_allow_origin' in config.get('fastapi'):
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=config.get('fastapi.cors_allow_origin'),
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     APP_START_TIME = dt.datetime.now()
     app.add_api_route("/health", health_handler, methods=["GET"])

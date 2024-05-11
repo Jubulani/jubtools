@@ -43,9 +43,11 @@ def create_fastapi_app(env: str, version: str, db_module: DBModule | None = None
     app = FastAPI(**fastapi_args)
 
     if 'cors_allow_origin' in config.get('fastapi'):
+        origins = config.get('fastapi.cors_allow_origin')
+        logger.info(f"Enabling CORS for origins: {origins}")
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=config.get('fastapi.cors_allow_origin'),
+            allow_origins=origins,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],

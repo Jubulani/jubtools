@@ -1,10 +1,10 @@
-from contextlib import contextmanager
 import os
 import tempfile
+from contextlib import contextmanager
 
-from async_asgi_testclient import TestClient
 import pytest
 import pytest_asyncio
+from async_asgi_testclient import TestClient
 
 from jubtools import config
 from jubtools.systemtools import create_fastapi_app
@@ -33,11 +33,8 @@ def write_config():
 
 @pytest_asyncio.fixture(scope="session")
 async def client():
-    env='UnitTest'
-    version='0.1.0'
-    config.CONFIG = {
-        'app_name': 'TestApp',
-        'fastapi': {'disable_docs': False}
-    }
+    env = "UnitTest"
+    version = "0.1.0"
+    config.CONFIG = {"app_name": "TestApp", "fastapi": {"disable_docs": False}}
     async with TestClient(application=create_fastapi_app(env=env, version=version)) as client:
         yield client

@@ -6,12 +6,9 @@ license = { file = "LICENSE" }
 version = "0.5.6"
 authors = [{ name = "Andrew Morcom", email = "jubulani@fastmail.fm" }]
 requires-python = ">=3.10"
-dependencies = ["fastapi"]
-
-[project.optional-dependencies]
-test = [
-    "async_asgi_testclient >= 1.4",
-    "pytest-asyncio >= 0.23"
+dependencies = [
+    "fastapi",
+    "toml>=0.10.2",
 ]
 
 [project.urls]
@@ -23,3 +20,27 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.package-data]
 "jubtools" = ["py.typed"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "UP", # pyupgrade
+]
+ignore = []
+
+[dependency-groups]
+dev = [
+    "aiosqlite>=0.21.0",
+    "async_asgi_testclient >= 1.4",
+    "asyncpg>=0.30.0",
+    "pytest>=8.4.1",
+    "pytest-asyncio >= 0.23",
+    "ruff",
+]

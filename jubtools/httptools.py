@@ -1,6 +1,6 @@
 import csv
-from enum import Enum
 import logging
+from enum import Enum
 from typing import Any
 
 import httpx
@@ -35,7 +35,7 @@ async def get(
                     logger.info(f"Response text: {resp.text}")
                     return resp.text
                 case ResponseFormat.CSV:
-                    return list(csv.DictReader(resp.text.splitlines(), delimiter=';'))
+                    return list(csv.DictReader(resp.text.splitlines(), delimiter=";"))
                 case ResponseFormat.JSON:
                     logger.info(f"Response JSON: {resp.json()}")
                     return resp.json()

@@ -1,10 +1,10 @@
+import json
+import logging
+import os
+import time
+from collections.abc import Iterable
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
-import json
-import os
-import logging
-import time
-from typing import List, Dict, Tuple, Iterable
 
 import asyncpg
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 _POOL = None
 _SQL = {}
-CONN = ContextVar('conn')
+CONN = ContextVar("conn")
 
 
 # Add ability to use 'row.value' syntax, which is shorter and easier than 'row["value"]'
@@ -41,18 +41,14 @@ async def init():
         database=database,
         min_size=2,
         record_class=Row,
-        init=init_conn
+        init=init_conn,
     )
     logger.info("DB connection pool created")
 
+
 async def init_conn(conn):
     logger.info(f"Initialising connection: {conn}")
-    await conn.set_type_codec(
-        'json',
-        encoder=json.dumps,
-        decoder=json.loads,
-        schema='pg_catalog'
-    )
+    await conn.set_type_codec("json", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
 
 
 async def shutdown():
@@ -70,12 +66,12 @@ def store(name, sql):
     _SQL[name] = sql
 
 
-async def execute(name: str, args={}, log_args=True) -> List[Row]:
+async def execute(name: str, args={}, log_args=True) -> list[Row]:
     conn = CONN.get()
     return await execute_with_conn(conn, name, args, log_args)
 
 
-async def execute_with_conn(con, name, args={}, log_args=True) -> List[Row]:
+async def execute_with_conn(con, name, args={}, log_args=True) -> list[Row]:
     if log_args:
         logger.info(f"Execute sql {name} with args: {args}")
     else:
@@ -87,12 +83,12 @@ async def execute_with_conn(con, name, args={}, log_args=True) -> List[Row]:
     return rs
 
 
-async def execute_sql(sql: str, args={}) -> List[Row]:
+async def execute_sql(sql: str, args={}) -> list[Row]:
     conn = CONN.get()
     return await execute_sql_with_conn(conn, sql, args)
 
 
-async def execute_sql_with_conn(conn, sql: str, args={}) -> List[Row]:
+async def execute_sql_with_conn(conn, sql: str, args={}) -> list[Row]:
     logger.info(f"Execute custom sql with args: {args}")
     sql, params = _format_sql(sql, args)
     with misctools.Timer() as timer:
@@ -111,7 +107,7 @@ class Serial(dict):
 
 
 # Get the sql from our saved list and process it with _format_sql
-def _get_sql(name, args) -> Tuple[str, Iterable]:
+def _get_sql(name, args) -> tuple[str, Iterable]:
     global _SQL
     if name not in _SQL:
         raise Exception(f"Unknown sql: {name}")
@@ -120,7 +116,7 @@ def _get_sql(name, args) -> Tuple[str, Iterable]:
 
 # Convert named ("{name}") params in the sql into positional
 # arguments ("$1"), as named arguments are not supported by asyncpg
-def _format_sql(sql: str, args: Dict) -> Tuple[str, Iterable]:
+def _format_sql(sql: str, args: dict) -> tuple[str, Iterable]:
     params = Serial(args)
     sql = sql.format_map(params)
     return (sql, params.values())

@@ -2,6 +2,7 @@ import json
 import logging
 import logging.config
 import os
+from typing import Any
 
 import toml
 
@@ -26,13 +27,13 @@ def init(env: str | None = None):
 
 def init_logging(log_config_file: str = "log_config.json"):
     filename = os.path.join(CONFIG_DIR, log_config_file)
-    with open(filename, "r") as f:
+    with open(filename) as f:
         log_config = json.load(f)
         logging.config.dictConfig(log_config)
 
 
 # Get a value from config. Will handle nested key names separated by dots eg. 'db.port'
-def get(full_key: str):
+def get(full_key: str) -> Any:
     keys = full_key.split(".")
     vals = CONFIG
     for key in keys:
@@ -44,7 +45,7 @@ def get(full_key: str):
 
 def _load_from_file(filename: str):
     global CONFIG
-    logger.info(f'Load config file: {filename}')
+    logger.info(f"Load config file: {filename}")
     config_dict = toml.load(filename)
     _merge_into(config_dict, CONFIG)
 

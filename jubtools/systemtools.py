@@ -1,7 +1,6 @@
 import datetime as dt
-from enum import Enum
 import logging
-import os
+from enum import Enum
 from typing import Any
 
 from fastapi import FastAPI, Response
@@ -9,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # from errors import AuthError, FSError
-
 from jubtools import config, misctools
 
 logger = logging.getLogger(__name__)
@@ -36,14 +34,14 @@ def create_fastapi_app(env: str, version: str, db_module: DBModule | None = None
         "title": config.get("app_name"),
         "version": version,
     }
-    if 'root_path' in config.get('fastapi'):
+    if "root_path" in config.get("fastapi"):
         fastapi_args["root_path"] = config.get("fastapi.root_path")
     if config.get("fastapi.disable_docs"):
         fastapi_args["openapi_url"] = None
     app = FastAPI(**fastapi_args)
 
-    if 'cors_allow_origin' in config.get('fastapi'):
-        origins = config.get('fastapi.cors_allow_origin')
+    if "cors_allow_origin" in config.get("fastapi"):
+        origins = config.get("fastapi.cors_allow_origin")
         logger.info(f"Enabling CORS for origins: {origins}")
         app.add_middleware(
             CORSMiddleware,
@@ -67,15 +65,17 @@ def create_fastapi_app(env: str, version: str, db_module: DBModule | None = None
 
 
 def init_db_module(db_module: DBModule, app: FastAPI):
-    """ Use dynamic imports here, so we don't need to install all db drivers """
+    """Use dynamic imports here, so we don't need to install all db drivers"""
 
     match db_module:
         case DBModule.SQLITE:
             from jubtools import sqlt
+
             app.add_middleware(sqlt.ConnMiddleware)
 
         case DBModule.POSTGRES:
             from jubtools import psql
+
             app.add_event_handler("startup", psql.init)
             app.add_event_handler("shutdown", psql.shutdown)
             app.add_middleware(psql.ConnMiddleware)
@@ -145,7 +145,5 @@ class TimerMiddleware:
             status_code = 500
             raise
         finally:
-            logger.info(
-                f"END - {scope['method']} {path} {status_code} ({timer.elapsed:.2f}ms)"
-            )
+            logger.info(f"END - {scope['method']} {path} {status_code} ({timer.elapsed:.2f}ms)")
         return result

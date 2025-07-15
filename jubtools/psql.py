@@ -23,7 +23,7 @@ class Row(asyncpg.Record):
         return self[name]
 
 
-async def init():
+async def init() -> None:
     global _POOL
 
     host = config.get("postgres.host")

@@ -8,6 +8,7 @@ authors = [{ name = "Andrew Morcom", email = "jubulani@fastmail.fm" }]
 requires-python = ">=3.10"
 dependencies = [
     "fastapi",
+    "pytest-asyncio>=1.0.0",
     "toml>=0.10.2",
 ]
 
@@ -34,6 +35,9 @@ select = [
     "UP", # pyupgrade
 ]
 ignore = []
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
 
 [dependency-groups]
 dev = [

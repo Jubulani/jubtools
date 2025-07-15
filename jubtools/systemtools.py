@@ -3,12 +3,14 @@ import logging
 from enum import Enum
 from typing import Any
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 # from errors import AuthError, FSError
 from jubtools import config, misctools
+from jubtools.errors import ClientError, JubError
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +58,7 @@ def create_fastapi_app(env: str, version: str, db_module: DBModule | None = None
 
     if db_module is not None:
         init_db_module(db_module, app)
-    # app.add_exception_handler(FSError, custom_exception_handler)
+    app.add_exception_handler(JubError, custom_exception_handler)
 
     # Add last, so it wraps everything
     app.add_middleware(TimerMiddleware)
@@ -105,12 +107,16 @@ async def health_handler(response: Response):
     )
 
 
-# def custom_exception_handler(request: Request, exc: FSError):
-#     logger.warning(f"Exception: {exc}")
-#     if isinstance(exc, AuthError):
-#         return RedirectResponse(url="/", status_code=303)
-#     else:
-#         return PlainTextResponse(status_code=exc.status_code, content=str(exc))
+def custom_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    if isinstance(exc, ClientError):
+        logger.warning(exc)
+    else:
+        logger.exception(exc)
+
+    http_status = 500
+    if isinstance(exc, JubError):
+        http_status = exc.http_status
+    return JSONResponse(status_code=http_status, content={"error": {"message": str(exc)}})
 
 
 # Provide logging of all requests, and the time taken to process them

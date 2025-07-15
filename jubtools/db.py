@@ -67,13 +67,12 @@ async def init(db_module: DBModule):
         from jubtools import psql
 
         _psql = psql
-        return await _psql.init()
+        await _psql.init()
     elif db_module == DBModule.SQLITE:
         from jubtools import sqlt
 
         _sqlt = sqlt
-        # SQLite doesn't have an init function, so we'll return None
-        return None
+        _sqlt.init()
     else:
         raise DatabaseError(f"Unsupported database module: {db_module}")
 
@@ -124,8 +123,8 @@ async def execute(name: str, args: dict[str, Any] = None, log_args: bool = True)
         rows = await _psql.execute(name, args, log_args)
         return [Row(row) for row in rows]
     elif _db_module == DBModule.SQLITE and _sqlt:
-        # SQLite module doesn't have execute function - this would need to be implemented
-        raise DatabaseError("SQLite execute function not implemented")
+        rows = await _sqlt.execute(name, args, log_args)
+        return [Row(row) for row in rows]
     else:
         raise DatabaseError("Database module not initialized")
 
@@ -148,8 +147,8 @@ async def execute_sql(sql: str, args: dict[str, Any] = None) -> list[Row]:
         rows = await _psql.execute_sql(sql, args)
         return [Row(row) for row in rows]
     elif _db_module == DBModule.SQLITE and _sqlt:
-        # SQLite module doesn't have execute_sql function - this would need to be implemented
-        raise DatabaseError("SQLite execute_sql function not implemented")
+        rows = await _sqlt.execute_sql(sql, args)
+        return [Row(row) for row in rows]
     else:
         raise DatabaseError("Database module not initialized")
 
@@ -167,8 +166,8 @@ async def connect():
         async with _psql.connect():
             yield
     elif _db_module == DBModule.SQLITE and _sqlt:
-        # SQLite module doesn't have connect function - this would need to be implemented
-        raise DatabaseError("SQLite connect function not implemented")
+        async with _sqlt.connect():
+            yield
     else:
         raise DatabaseError("Database module not initialized")
 

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from jubtools import config, db
 from jubtools.errors import ClientError
-from jubtools.systemtools import DBModule, create_fastapi_app
+from jubtools.systemtools import create_fastapi_app
 
 
 class UserNotFound(ClientError):
@@ -61,10 +61,7 @@ async def integration_client():
             await conn.commit()
 
         # Create FastAPI app with SQLite database
-        app = create_fastapi_app(env="test", version="1.0.0", db_module=DBModule.SQLITE)
-
-        # Initialize database module
-        await db.init(DBModule.SQLITE)
+        app = create_fastapi_app(env="test", version="1.0.0", db_module=db.DBModule.SQLITE)
 
         db.store(
             __name__ + ":get_all_users", "SELECT id, name, email, created_at FROM users ORDER BY id"

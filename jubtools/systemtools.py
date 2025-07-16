@@ -1,6 +1,5 @@
 import datetime as dt
 import logging
-from enum import Enum
 from typing import Any
 
 from fastapi import FastAPI, Request, Response
@@ -8,8 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-# from errors import AuthError, FSError
-from jubtools import config, misctools
+from jubtools import config, db, misctools
 from jubtools.errors import ClientError, JubError
 
 logger = logging.getLogger(__name__)
@@ -19,12 +17,7 @@ APP_VERSION: str
 APP_ENV: str
 
 
-class DBModule(Enum):
-    SQLITE = 1
-    POSTGRES = 2
-
-
-def create_fastapi_app(env: str, version: str, db_module: DBModule | None = None) -> FastAPI:
+def create_fastapi_app(env: str, version: str, db_module: db.DBModule | None = None) -> FastAPI:
     global APP_ENV
     global APP_VERSION
     global APP_START_TIME
@@ -66,16 +59,19 @@ def create_fastapi_app(env: str, version: str, db_module: DBModule | None = None
     return app
 
 
-def init_db_module(db_module: DBModule, app: FastAPI):
+def init_db_module(db_module: db.DBModule, app: FastAPI):
     """Use dynamic imports here, so we don't need to install all db drivers"""
 
+    db.init(db_module)
+
     match db_module:
-        case DBModule.SQLITE:
+        case db.DBModule.SQLITE:
             from jubtools import sqlt
 
+            app.add_event_handler("startup", sqlt.init)
             app.add_middleware(sqlt.ConnMiddleware)
 
-        case DBModule.POSTGRES:
+        case db.DBModule.POSTGRES:
             from jubtools import psql
 
             app.add_event_handler("startup", psql.init)

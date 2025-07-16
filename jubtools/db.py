@@ -5,11 +5,16 @@ Automatically detects the configured database type and delegates to the appropri
 
 import logging
 from contextlib import asynccontextmanager
+from enum import Enum
 from typing import Any
 
-from jubtools.systemtools import DBModule
-
 logger = logging.getLogger(__name__)
+
+
+class DBModule(Enum):
+    SQLITE = 1
+    POSTGRES = 2
+
 
 # Global variables to track the active database module
 _db_module: DBModule | None = None
@@ -51,7 +56,7 @@ class Row:
         return self._row.items()
 
 
-async def init(db_module: DBModule):
+def init(db_module: DBModule):
     """
     Initialize the database module based on configuration.
 
@@ -67,25 +72,12 @@ async def init(db_module: DBModule):
         from jubtools import psql
 
         _psql = psql
-        await _psql.init()
     elif db_module == DBModule.SQLITE:
         from jubtools import sqlt
 
         _sqlt = sqlt
-        _sqlt.init()
     else:
         raise DatabaseError(f"Unsupported database module: {db_module}")
-
-
-async def shutdown():
-    """Shutdown the database connection."""
-    if _db_module == DBModule.POSTGRES and _psql:
-        await _psql.shutdown()
-    elif _db_module == DBModule.SQLITE:
-        # SQLite doesn't have a shutdown function
-        pass
-    else:
-        logger.warning("No database module initialized for shutdown")
 
 
 def store(name: str, sql: str):

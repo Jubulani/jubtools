@@ -144,7 +144,7 @@ async def execute_sql(sql: str, args: dict[str, Any] | None = None) -> list[Row]
         args = {}
 
     if _db_module == DBModule.POSTGRES and _psql:
-        rows = await _psql.exec ute_sql(sql, args)
+        rows = await _psql.execute_sql(sql, args)
         return [Row(row) for row in rows]
     elif _db_module == DBModule.SQLITE and _sqlt:
         rows = await _sqlt.execute_sql(sql, args)

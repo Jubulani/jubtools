@@ -50,7 +50,7 @@ def create_fastapi_app(env: str, version: str, db_module: db.DBModule | None = N
     app.add_api_route("/health", health_handler, methods=["GET"])
 
     if db_module is not None:
-        init_db_module(db_module, app)
+        db.init_for_fastapi(db_module, app)
     app.add_exception_handler(JubError, custom_exception_handler)
 
     # Add last, so it wraps everything
@@ -61,25 +61,6 @@ def create_fastapi_app(env: str, version: str, db_module: db.DBModule | None = N
 
 def init_db_module(db_module: db.DBModule, app: FastAPI):
     """Use dynamic imports here, so we don't need to install all db drivers"""
-
-    db.init(db_module)
-
-    match db_module:
-        case db.DBModule.SQLITE:
-            from jubtools import sqlt
-
-            app.add_event_handler("startup", sqlt.init)
-            app.add_middleware(sqlt.ConnMiddleware)
-
-        case db.DBModule.POSTGRES:
-            from jubtools import psql
-
-            app.add_event_handler("startup", psql.init)
-            app.add_event_handler("shutdown", psql.shutdown)
-            app.add_middleware(psql.ConnMiddleware)
-
-        case _:
-            raise ValueError(f"Unknown db_module: {db_module}")
 
 
 class HealthResponse(BaseModel):

@@ -17,12 +17,6 @@ _SQL = {}
 CONN = ContextVar("conn")
 
 
-# Add ability to use 'row.value' syntax, which is shorter and easier than 'row["value"]'
-class Row(asyncpg.Record):
-    def __getattr__(self, name):
-        return self[name]
-
-
 async def init() -> None:
     global _POOL
 
@@ -40,7 +34,6 @@ async def init() -> None:
         password=password,
         database=database,
         min_size=2,
-        record_class=Row,
         init=init_conn,
     )
     logger.info("DB connection pool created")
@@ -66,12 +59,12 @@ def store(name, sql):
     _SQL[name] = sql
 
 
-async def execute(name: str, args={}, log_args=True) -> list[Row]:
+async def execute(name: str, args={}, log_args=True) -> list[asyncpg.Record]:
     conn = CONN.get()
     return await execute_with_conn(conn, name, args, log_args)
 
 
-async def execute_with_conn(con, name, args={}, log_args=True) -> list[Row]:
+async def execute_with_conn(con, name, args={}, log_args=True) -> list[asyncpg.Record]:
     if log_args:
         logger.info(f"Execute sql {name} with args: {args}")
     else:
@@ -83,12 +76,12 @@ async def execute_with_conn(con, name, args={}, log_args=True) -> list[Row]:
     return rs
 
 
-async def execute_sql(sql: str, args={}) -> list[Row]:
+async def execute_sql(sql: str, args={}) -> list[asyncpg.Record]:
     conn = CONN.get()
     return await execute_sql_with_conn(conn, sql, args)
 
 
-async def execute_sql_with_conn(conn, sql: str, args={}) -> list[Row]:
+async def execute_sql_with_conn(conn, sql: str, args={}) -> list[asyncpg.Record]:
     logger.info(f"Execute custom sql with args: {args}")
     sql, params = _format_sql(sql, args)
     with misctools.Timer() as timer:

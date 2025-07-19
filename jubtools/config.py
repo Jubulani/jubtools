@@ -37,17 +37,23 @@ def get(full_key: str) -> Any:
     keys = full_key.split(".")
     vals = CONFIG
     for key in keys:
-        if key not in vals:
+        key_folded = key.casefold()
+        if key_folded not in vals:
             raise Exception(f"Config key not present: {full_key}")
-        vals = vals[key.casefold()]
+        vals = vals[key_folded]
     return vals
 
 
 def _load_from_file(filename: str):
     global CONFIG
     logger.info(f"Load config file: {filename}")
-    config_dict = toml.load(filename)
-    _merge_into(config_dict, CONFIG)
+    try:
+        config_dict = toml.load(filename)
+        _merge_into(config_dict, CONFIG)
+    except FileNotFoundError:
+        logger.error(f"Config file not found: {filename}")
+    except Exception as e:
+        logger.error(f"Error loading config file {filename}: {e}")
 
 
 # Merge dicts recursively, overwriting values in dest with new values from src if present

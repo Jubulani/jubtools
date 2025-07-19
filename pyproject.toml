@@ -49,4 +49,5 @@ dev = [
     "pytest-asyncio>=1.0.0",
     "ruff",
     "twine>=6.1.0",
+    "ty>=0.0.1a15",
 ]

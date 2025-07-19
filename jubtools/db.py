@@ -5,7 +5,8 @@ Automatically detects the configured database type and delegates to the appropri
 
 import logging
 from enum import Enum
-from typing import Any
+from typing import Any, AsyncGenerator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
@@ -57,9 +58,35 @@ class Row:
         return self._row.items()
 
 
+async def init(db_module: DBModule):
+    """
+    Initialize the database module for standalone usage (non-FastAPI).
+
+    Args:
+        db_module: The database module to use (DBModule.POSTGRES or DBModule.SQLITE)
+    """
+    global _db_module, _psql, _sqlt
+
+    _db_module = db_module
+    logger.info(f"Initializing database interface for {db_module.name}")
+
+    if db_module == DBModule.POSTGRES:
+        from jubtools import psql
+
+        _psql = psql
+        await psql.init()
+    elif db_module == DBModule.SQLITE:
+        from jubtools import sqlt
+
+        _sqlt = sqlt
+        sqlt.init()
+    else:
+        raise DatabaseError(f"Unsupported database module: {db_module}")
+
+
 def init_for_fastapi(db_module: DBModule, app: FastAPI):
     """
-    Initialize the database module based on configuration.
+    Initialize the database module based on configuration for FastAPI.
 
     Args:
         db_module: The database module to use (DBModule.POSTGRES or DBModule.SQLITE)
@@ -84,6 +111,22 @@ def init_for_fastapi(db_module: DBModule, app: FastAPI):
         app.add_middleware(sqlt.ConnMiddleware)
     else:
         raise DatabaseError(f"Unsupported database module: {db_module}")
+
+
+async def shutdown():
+    """
+    Shutdown the database module and clean up resources.
+
+    For PostgreSQL, this closes the connection pool.
+    For SQLite, no cleanup is needed as connections are per-request.
+    """
+    if _db_module == DBModule.POSTGRES and _psql:
+        await _psql.shutdown()
+    elif _db_module == DBModule.SQLITE and _sqlt:
+        # SQLite doesn't need explicit shutdown
+        pass
+    else:
+        logger.warning("Database module not initialized, nothing to shutdown")
 
 
 def store(name: str, sql: str):
@@ -149,5 +192,22 @@ async def execute_sql(sql: str, args: dict[str, Any] | None = None) -> list[Row]
     elif _db_module == DBModule.SQLITE and _sqlt:
         rows = await _sqlt.execute_sql(sql, args)
         return [Row(row) for row in rows]
+    else:
+        raise DatabaseError("Database module not initialized")
+
+
+@asynccontextmanager
+async def connect() -> AsyncGenerator[None, None]:
+    """
+    Connect to the configured database.
+
+    Delegates to the appropriate database module's connect function.
+    """
+    if _db_module == DBModule.POSTGRES and _psql:
+        async with _psql.connect():
+            yield
+    elif _db_module == DBModule.SQLITE and _sqlt:
+        async with _sqlt.connect():
+            yield
     else:
         raise DatabaseError("Database module not initialized")

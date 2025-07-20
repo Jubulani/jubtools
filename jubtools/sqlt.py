@@ -92,6 +92,7 @@ async def connect():
     global CONN
     async with aiosqlite.connect(DB_PATH) as conn:
         conn.row_factory = Row
+        await conn.execute("PRAGMA foreign_keys = ON")
         token = CONN.set(conn)
         try:
             yield

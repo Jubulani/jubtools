@@ -95,6 +95,10 @@ async def connect():
         token = CONN.set(conn)
         try:
             yield
+            await conn.commit()
+        except Exception:
+            await conn.rollback()
+            raise
         finally:
             CONN.reset(token)
 

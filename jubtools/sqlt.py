@@ -16,7 +16,7 @@ CONN = ContextVar("conn")
 def init():
     global DB_PATH
 
-    DB_PATH = config.get("db.sqlite.path")
+    DB_PATH = config.get("sqlite.path")
     logger.info(f"Using sqlite db {DB_PATH}")
 
 
